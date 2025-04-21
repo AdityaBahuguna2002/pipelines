@@ -1,0 +1,49 @@
+**docker installation---
+
+sudo apt update -y
+sudo apt install docker.io -y
+sudo apt install docker-compose -y
+
+**docker permission change-----------
+
+sudo usermod -aG docker $USER  // add user to docker group-------
+sudo reboot
+
+**Jenkins installation ------- 
+   Jenkins runs with Java, and needs to be installed with Java--
+   Copy and paste the below link to your browser----
+
+https://www.jenkins.io/doc/book/installing/linux/
+
+***plugin to install into Jenkins----
+	--- SonarQube scanner
+	--- Sonar quality gates
+	--- OWASP dependency-check
+	--- docker 
+
+***SonarQube server setup by docker images  -------------
+
+sudo docker run -itd --name sonar-server -p 9000:9000 sonarqube:lts-community 
+  
+
+*** trivy installation ------ go to the below link -----
+
+ https://trivy.dev/v0.57/getting-started/installation/
+
+
+---- *** github projet link -----------
+
+https://github.com/AdityaBahuguna2002/Wanderlust-Mega-Project.git 
+
+---------------- sonarqube token -------------
+
+squ_7f448b07bd25ff0ab2a839fe0adb35f4917582df
+
+---- intergrate sonarqube server with jenkins ------------------
+	--- in jenkins create webhook of jenkins
+	--- then create token for the jenins inside sonrwube
+
+	--- now go to jenkins to set up sonarqube server inside jenkins --> system 
+
+
+
