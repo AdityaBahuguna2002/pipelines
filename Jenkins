@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    environment{
+        SONAR_HOME= tool "sonar"
+    }
+
+    stages {
+        stage('Clone code from Gihub') {
+            steps{
+                git url:"https://github.com/AdityaBahuguna2002/Wanderlust-Mega-Project.git", branch:"main"
+            }
+        }
+        
+        stage("SonarQube Analysis"){
+            steps{
+                    withSonarQubeEnv('sonar'){
+                    sh '$SONAR_HOME/bin/sonar-scanner -Dsonar.projectName=wonderlust -Dsonar.projectKey=wonderlust'
+                }
+            }
+        }
+        
+        stage('OWASP Dependency check'){
+            steps{
+                dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'dc'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('sonar quality gate scanner'){
+            steps{
+                timeout(time:2, unit:"MINUTES"){
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+         stage('Trivy file system scan'){
+            steps{
+                sh 'trivy fs --format table -o trivy-fs-report.html .'
+            }
+        }
+    }
+}
