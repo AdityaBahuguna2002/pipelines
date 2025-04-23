@@ -44,7 +44,7 @@ pipeline{
         stage('Docker Build an image') {
             steps {                
                 script {                    
-                    def imageTag = "cyberdesk07/youtube:${BUILD_NUMBER}"
+                    def imageTag = "adityabahuguna2002/${IMAGE_NAME}:${BUILD_NUMBER}"
                     sh "docker build -t ${imageTag} ."
                 }
             }
@@ -53,8 +53,8 @@ pipeline{
         stage('Docker Push to Push an Image to Docker Hub') {
             steps {                
                 script {                    
-                        def imageTag = "cyberdesk07/youtube:${BUILD_NUMBER}"                    
-                        withDockerRegistry(credentialsId: 'dockerhub', toolName: 'docker') {   
+                        def imageTag = "adityabahuguna2002/${IMAGE_NAME}:${BUILD_NUMBER}"                    
+                        withDockerRegistry(credentialsId: 'docker-hub', toolName: 'docker') {   
                         sh "docker push ${imageTag}"
                     }
                 }
