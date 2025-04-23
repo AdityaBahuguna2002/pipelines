@@ -2,8 +2,8 @@ pipeline{
     agent any 
     
     environment{
-        SONAR_HOME = tool "sonar"
-        IMAGE_NAME = "react-app"
+        SONAR_HOME = tool "sonar" // tool use sonaqube their credentials here 
+        IMAGE_NAME = "react-app" // image name mention in docker-compose.yml file 
         COMPOSE_FILE = "docker-compose.yml"
     }
     
@@ -22,7 +22,7 @@ pipeline{
                 }
             }
         }
-        stage("OWASP Dependency Check"){
+        stage("OWASP Dependency Check"){  //
             steps {
                 echo "OWASP Dependency check here"
                 dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'dc'
