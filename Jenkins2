@@ -2,9 +2,9 @@ pipeline{
     agent any 
     
     environment{
-        IMAGE_NAME = "react-app"  // or container name find from docker-compose.yml file 
-        COMPOSE_FILE = "docker-compose.yml"
-        SONAR_HOME = tool "sonar" // tool which we mention in environment after integration 
+      IMAGE_NAME = "react-app"  // or container name find from docker-compose.yml file 
+      COMPOSE_FILE = "docker-compose.yml"
+      SONAR_HOME = tool "sonar" // tool which we mention in environment after integration
     }
     
     stages{
@@ -17,12 +17,12 @@ pipeline{
         stage("Sonarqube Quality Analysis"){
             steps {
                 echo "Sonarqube quality analysis check "
-                withSonarQubeEnv("sonar"){  // with sonar qube environment wich is above mention in environment section
+                withSonarQubeEnv("sonar"){     // with sonar qube environment wich is above mention in environment section
                     sh "$SONAR_HOME/bin/sonar-scanner -Dsonar.projectName=cptfrontendcode -Dsonar.projectKey=cptfrontendcode "
                 }
             }
         }
-        stage("OWASP Dependency Check"){ //  scan the code and also all dependency 
+        stage("OWASP Dependency Check"){  //  scan the code and also all dependency
             steps {
                 echo "OWASP Dependency check here"
                 dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'dc'
@@ -41,15 +41,27 @@ pipeline{
                 sh "trivy fs --format table -o trivy-fs-report.html ."
             }
         }
-        stage("Docker Build the Image"){
-            steps{
+        stage('Docker Build') {
+            steps {  
                 echo "Building the image"
-                script{
-                    docker.build("${IMAGE_NAME}")
+                script {                    
+                    def imageTag = "adityabahuguna2002/${IMAGE_NAME}:${BUILD_NUMBER}"
+                    sh "docker build -t ${imageTag} ."
                 }
             }
         }
-        stage("Docker-Compose to Deploy the image"){
+ 
+        stage('Docker Push to Push an Image to Docker Hub') {
+            steps {                
+                script {                    
+                    def imageTag = "adityabahuguna2002/${IMAGE_NAME}:${BUILD_NUMBER}"                    
+                    withDockerRegistry(credentialsId: 'docker-hub', toolName: 'docker') {   
+                        sh "docker push ${imageTag}"
+                    }
+                }
+            }
+        }
+        stage("Docker-Compose Deploy"){
             steps{
                 echo "Docker-compose Deploying the code"
                 script{
