@@ -1,47 +1,83 @@
-pipeline {
-    agent any
+pipeline{
+    agent any 
+    
     environment{
-        SONAR_HOME= tool "sonar"
+        SONAR_HOME = tool "sonar"
+        IMAGE_NAME = "react-app"
+        COMPOSE_FILE = "docker-compose.yml"
     }
-
-    stages {
-        stage('Clone code from Gihub') {
+    
+    stages{
+        stage('Github code Checkout'){
             steps{
-                git url:"https://github.com/AdityaBahuguna2002/Wanderlust-Mega-Project.git", branch:"main"
+                echo "Code from github"
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'github-token', url: 'https://github.com/CynoteckTools/cptfrontendcode.git']])
             }
         }
-        
-        stage("SonarQube Analysis"){
-            steps{
-                    withSonarQubeEnv('sonar'){
-                    sh '$SONAR_HOME/bin/sonar-scanner -Dsonar.projectName=wonderlust -Dsonar.projectKey=wonderlust'
+        stage("Sonarqube Quality Analysis"){
+            steps {
+                echo "Sonarqube quality analysis check "
+                withSonarQubeEnv("sonar"){
+                    sh "$SONAR_HOME/bin/sonar-scanner -Dsonar.projectName=cptfrontendcode -Dsonar.projectKey=cptfrontendcode "
                 }
             }
         }
-        
-        stage('OWASP Dependency check'){
-            steps{
+        stage("OWASP Dependency Check"){
+            steps {
+                echo "OWASP Dependency check here"
                 dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'dc'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                dependencyCheckPublisher pattern: "**/dependency-check-report.xml"
             }
         }
-        stage('sonar quality gate scanner'){
+        stage('Sonar Quality Gate scan'){
             steps{
                 timeout(time:2, unit:"MINUTES"){
                     waitForQualityGate abortPipeline: false
                 }
             }
         }
-         stage('Trivy file system scan'){
+        stage("Trivy File System scan"){
             steps{
-                sh 'trivy fs --format table -o trivy-fs-report.html .'
+                sh "trivy fs --format table -o trivy-fs-report.html ."
             }
         }
-
-        stage("Deploy using Docker compose"){
-            steps{
-                sh 'docker-compose up -d'
+        stage('Docker Build an image') {
+            steps {                
+                script {                    
+                    def imageTag = "cyberdesk07/youtube:${BUILD_NUMBER}"
+                    sh "docker build -t ${imageTag} ."
+                }
             }
+        }
+ 
+        stage('Docker Push to Push an Image to Docker Hub') {
+            steps {                
+                script {                    
+                    def imageTag = "${IMAGE_NAME}:${BUILD_NUMBER}"                    
+                    withDockerRegistry(credentialsId: 'docker-hub', toolName: 'docker') {   
+                        sh "docker push ${imageTag}"
+                    }
+                }
+            }
+        }
+        stage("Docker-Compose Deploy"){
+            steps{
+                echo "Docker-compose Deploying the code"
+                script{
+                    sh """
+                        docker-compose down || true
+                        docker-compose up -d --build
+                       """
+                }
+            }
+        }
+    }
+    post{
+        success{
+            echo "deployed successfully"
+        }
+        failure{
+            echo "deployment failed"
         }
     }
 }
