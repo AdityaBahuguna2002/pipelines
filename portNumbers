@@ -1,0 +1,5 @@
+Jenkins: 8080
+SonarQube: 9000
+Grafana: 3000
+Prometheus: 9090
+Loki: 3100
