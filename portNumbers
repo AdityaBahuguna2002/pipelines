@@ -3,3 +3,4 @@ SonarQube: 9000
 Grafana: 3000
 Prometheus: 9090
 Loki: 3100
+node_exporter: 9100
