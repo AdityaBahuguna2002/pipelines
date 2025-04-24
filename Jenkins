@@ -8,6 +8,11 @@ pipeline{
     }
     
     stages{
+        stage("clean workspace"){
+            steps{
+                cleanws()
+            }
+        }
         stage('Github code Checkout'){
             steps{
                 echo "Code from github"
