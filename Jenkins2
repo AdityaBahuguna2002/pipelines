@@ -11,7 +11,7 @@ pipeline{
         stage('Github code Checkout'){
             steps{
                 echo "Code from github"
-                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'github-token', url: 'https://github.com/CynoteckTools/cptfrontendcode.git']])
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'github-token', url: 'https://github.com/url-of-your-repo.git']])
             }
         }
         stage("Sonarqube Quality Analysis"){
