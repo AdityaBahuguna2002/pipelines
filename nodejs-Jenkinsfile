@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'nodejs-18'  // This installs Node.js automatically from Jenkins Global Tools config
+    }
+
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner' // Make sure this tool is configured in Jenkins Global Tools
+        SONAR_HOST_URL = 'http://192.168.5.5:9000' // sonar qube server url
+        SONAR_PROJECT_KEY = 'cynoteck-website'  // project key in sonar qube
+        PATH = "${tool 'nodejs-18'}/bin:${env.PATH}"  // Add node binaries to PATH
+    }
+
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout Code from GitHub') {
+            steps {
+                checkout scmGit(branches: [[name: '*/aman']], extensions: [], userRemoteConfigs: [[credentialsId: 'github-token', url: 'https://github.com/macpan83/cynoteck-blogging.git']])
+            }
+        }
+ 
+        stage('Install Node.js dependencies') {
+            steps {
+                sh 'npm install'  // install dependencies so sonar scanner and other node tools can run
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh '''
+                        ${SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+                        -Dsonar.projectName=$SONAR_PROJECT_KEY \
+                        -Dsonar.sources=. \
+                        -Dsonar.java.binaries=.
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    def qg = waitForQualityGate abortPipeline: true
+                    if (qg.status != 'OK') {
+                        error "Pipeline aborted due to Quality Gate failure: ${qg.status}"
+                    }
+                }
+            }
+        }
+
+        stage("Download SonarQube Metrics Report") {
+            steps {
+                echo "Downloading metrics report from SonarQube"
+                withCredentials([string(credentialsId: 'sonar', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                        curl -s -u $SONAR_TOKEN: \
+                        "$SONAR_HOST_URL/api/measures/component?component=$SONAR_PROJECT_KEY&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc,security_hotspots" \
+                        -o sonar-report.json
+                    '''
+                }
+            }
+        }
+
+        // stage('OWASP Dependency Check') {
+        //     steps {
+        //         dependencyCheck odcInstallation: 'dependency-check',
+        //         additionalArguments: '--scan . --format ALL --out dependency-check-report'
+        //     }
+        // }
+
+        stage('Trivy Full Project Scan') {
+            steps {
+                echo "Running full Trivy scan"
+                sh '''
+                    # Table format for human review
+                    trivy fs . \
+                        --scanners vuln,secret,config,license \
+                        --severity LOW,MEDIUM,HIGH,CRITICAL \
+                        --format table \
+                        --output trivy-full-scan-report.txt \
+                        --no-progress \
+                        --include-dev-deps \
+                        --list-all-pkgs
+        
+                    # JSON format for automation
+                    trivy fs . \
+                        --scanners vuln,secret,config,license \
+                        --severity LOW,MEDIUM,HIGH,CRITICAL \
+                        --format json \
+                        --output trivy-full-scan-report.json \
+                        --no-progress \
+                        --include-dev-deps \
+                        --list-all-pkgs
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully"
+            archiveArtifacts artifacts: 'sonar-report.json, trivy-full-scan-report.txt, trivy-full-scan-report.json', onlyIfSuccessful: true
+        }
+        failure {
+            echo "Pipeline failed"
+        }
+    }
+}
